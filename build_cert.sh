@@ -1,9 +1,17 @@
 #!/bin/bash
 
+# 传入参数：证书主机（通常是公网 IP 或域名）
 CERT_HOST=$1
+# 证书输出目录
 CERT_DIR=$2
+# openssl 配置文件输出路径
 CONF_FILE=$3
 
+# 生成最小可用的 openssl 配置：
+# - 关闭交互输入（prompt = no）
+# - 同时写入 req_ext 与 v3_req，确保 SAN 生效
+# - 当前默认以 IP SAN 方式写入 CERT_HOST
+#   若需域名证书，可自行扩展为 DNS.1
 echo "[req]
 default_bits  = 2048
 distinguished_name = req_distinguished_name
@@ -28,5 +36,7 @@ subjectAltName = @alt_names
 IP.1 = $CERT_HOST
 " > "$CONF_FILE"
 
+# 确保证书目录存在
 mkdir -p "$CERT_DIR"
+# 生成 730 天有效期的自签证书与私钥
 openssl req -x509 -nodes -days 730 -newkey rsa:2048 -keyout "$CERT_DIR/$CERT_HOST.key" -out "$CERT_DIR/$CERT_HOST.crt" -config "$CONF_FILE"

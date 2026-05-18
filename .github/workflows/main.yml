@@ -1,55 +1,28 @@
-name: Disable Checking ServerName
+name: main
 
 on:
+  # 手动触发，便于维护者在需要时执行
   workflow_dispatch:
+  # 当推送到主分支时触发，可用于持续构建验证
   push:
     branches:
       - main
-  pull_request:
-    branches: [ main ]
-  pull_request_target:
-    types: [assigned, opened, synchronize, reopened]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      # 拉取仓库代码（默认深度可满足本流程）
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          submodules: true
+          # 同时拉取子模块，避免构建时找不到 tailscale
+          submodules: recursive
 
-      - name: modify
-        run: |
-          cd tailscale
-          sed -i '/hi.ServerName != m.hostname/,+2d' cmd/derper/cert.go
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-
+      # 安装 Docker Buildx，便于后续扩展多架构构建
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          
-      - name: Login to ghcr.io
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GHCR_TOKEN }}
-
-      # Runs a single command using the runners shell
-      - name: Build and push Docker images to docker.io and ghcr.io
-        uses: docker/build-push-action@v2
-        with:
-          file: 'Dockerfile'
-          platforms: linux/amd64
-          context: ./
-          push: true
-          tags: |
-            yangchuansheng/ip_derper:latest
-            ghcr.io/yangchuansheng/ip_derper:latest
+      # 验证 Dockerfile 至少能成功构建，确保提交可用
+      - name: Build image
+        run: docker build -t ip-derper:ci .

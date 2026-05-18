@@ -1,3 +1,6 @@
+# Git 子模块配置文件
+# 这里声明本仓库依赖的 tailscale 源码子模块
+# 如需切换上游，可修改 url 并执行 submodule sync/update
 [submodule "tailscale"]
 	path = tailscale
-	url = https://github.com/tailscale/tailscale
+	url = https://github.com/tailscale/tailscale.git
