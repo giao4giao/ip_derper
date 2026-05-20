@@ -7,11 +7,16 @@ CERT_DIR=$2
 # openssl 配置文件输出路径
 CONF_FILE=$3
 
+# 判断是 IPv4 还是域名，自动写入对应 SAN
+if echo "$CERT_HOST" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
+    SAN="IP.1 = $CERT_HOST"
+else
+    SAN="DNS.1 = $CERT_HOST"
+fi
+
 # 生成最小可用的 openssl 配置：
 # - 关闭交互输入（prompt = no）
 # - 同时写入 req_ext 与 v3_req，确保 SAN 生效
-# - 当前默认以 IP SAN 方式写入 CERT_HOST
-#   若需域名证书，可自行扩展为 DNS.1
 echo "[req]
 default_bits  = 2048
 distinguished_name = req_distinguished_name
@@ -33,7 +38,7 @@ subjectAltName = @alt_names
 subjectAltName = @alt_names
 
 [alt_names]
-IP.1 = $CERT_HOST
+$SAN
 " > "$CONF_FILE"
 
 # 确保证书目录存在
