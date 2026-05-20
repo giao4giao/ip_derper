@@ -41,9 +41,14 @@ COPY build_cert.sh /app/
 COPY --from=builder /app/derper /app/derper
 
 # 启动流程：
-# 1) 先按 DERP_HOST 生成自签证书
-# 2) 再以手动证书模式启动 derper
-CMD bash /app/build_cert.sh "$DERP_HOST" "$DERP_CERTS" /app/san.conf && \
+# 1) 若已有真实证书，跳过自签
+# 2) 否则按 DERP_HOST 生成自签证书
+# 3) 以手动证书模式启动 derper
+CMD if [ -f "$DERP_CERTS/$DERP_HOST.crt" ] && [ -f "$DERP_CERTS/$DERP_HOST.key" ]; then \
+        echo "Found existing certs, skipping self-signed generation"; \
+    else \
+        bash /app/build_cert.sh "$DERP_HOST" "$DERP_CERTS" /app/san.conf; \
+    fi && \
     /app/derper --hostname="$DERP_HOST" \
     --certmode=manual \
     --certdir="$DERP_CERTS" \
