@@ -20,9 +20,16 @@
 - `derper` 容器通过挂载同一 socket，实现 `--verify-clients` 所需的本机 Tailscale 身份校验。
 - 两个容器都使用 `network_mode: host`，减少 NAT 复杂度，避免 UDP 穿透链路额外损耗。
 
-> 安全提示：
+> 建议：
 > - 不要把 `TS_AUTHKEY` 明文提交到仓库。
-> - 以下示例已将公网 IP、AuthKey 脱敏，请替换成你自己的值。
+> - 示例中的公网 IP、AuthKey 请替换为你自己的值。
+
+### 参数改为环境变量（推荐）
+
+| 原来自定义参数 | 对应的环境变量 |
+| --- | --- |
+| `--socket=/var/run/tailscale/tailscaled.sock` | `TS_SOCKET=/var/run/tailscale/tailscaled.sock` |
+| `--tun=userspace-networking` | `TS_USERSPACE_NETWORKING=true` |
 
 ### docker-compose.yml
 
@@ -32,13 +39,14 @@ services:
     image: tailscale/tailscale:latest
     container_name: tailscale
     hostname: derp-node
-    command: tailscaled --socket=/var/run/tailscale/tailscaled.sock --tun=userspace-networking
     environment:
       - TS_AUTHKEY=tskey-auth-REDACTED
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_NETFILTER_MODE=off
       - TS_ROUTES=
       - TS_ACCEPT_DNS=false
+      - TS_USERSPACE_NETWORKING=true
+      - TS_SOCKET=/var/run/tailscale/tailscaled.sock
     volumes:
       - ./tailscale:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
@@ -50,7 +58,7 @@ services:
     restart: unless-stopped
 
   derper:
-    image: ghcr.io/giao4giao/ip-derper:sha-a46da4d
+    image: ghcr.io/giao4giao/ip-derper:latest
     container_name: derper
     restart: always
     network_mode: host
@@ -70,7 +78,7 @@ services:
 
 ### 1) tailscale 采用 userspace networking
 
-`tailscaled --tun=userspace-networking` 可以避免修改宿主机默认路由与 DNS，适合已在线上运行其他网络服务的机器。
+通过 `TS_USERSPACE_NETWORKING=true` 启用 userspace networking，可以避免修改宿主机默认路由与 DNS，适合已在线上运行其他网络服务的机器。
 
 配套参数含义：
 
